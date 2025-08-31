@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BW-Assist (ohne RAG)</title>
+  <style>
+    :root {
+      --bg: #0f172a;        /* tiefes blau/schwarz */
+      --panel: #111827;     /* dunkles grau-blau */
+      --text: #e5e7eb;      /* hellgrau */
+      --muted: #9ca3af;     /* grauton */
+      --accent: #38bdf8;    /* cyan */
+      --border: #1f2937;
+      --ok: #22c55e;
+      --err: #ef4444;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: var(--bg); color: var(--text);
+      font: 15px/1.5 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    }
+    header {
+      padding: 14px 18px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      background: #0b1220;
+    }
+    header h1 { margin: 0; font-size: 16px; font-weight: 600; }
+    header .badge { color: var(--muted); font-size: 12px; }
+
+    .wrap {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+      padding: 12px; height: calc(100dvh - 60px);
+    }
+    @media (max-width: 900px) {
+      .wrap { grid-template-columns: 1fr; height: auto; }
+    }
+    .panel {
+      background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+      display: flex; flex-direction: column; min-height: 320px;
+    }
+    .panel h2 {
+      margin: 0; padding: 12px 14px; border-bottom: 1px solid var(--border);
+      font-size: 14px; font-weight: 600; color: var(--muted);
+    }
+    .controls { padding: 12px 14px; display: grid; gap: 10px; }
+    label { font-size: 12px; color: var(--muted); }
+
+    select, textarea, input[type="file"] {
+      width: 100%; border: 1px solid var(--border); border-radius: 10px;
+      background: #0b1220; color: var(--text); padding: 10px 12px;
+    }
+    textarea { min-height: 180px; resize: vertical; }
+
+    .btns { display: flex; gap: 8px; flex-wrap: wrap; }
+    button {
+      border: 1px solid var(--border); background: #0b1220; color: var(--text);
+      padding: 10px 12px; border-radius: 10px; cursor: pointer;
+    }
+    button.primary { border-color: #155e75; background: #083344; color: #e0f2fe; }
+    button:disabled { opacity: .6; cursor: not-allowed; }
+    .hint { color: var(--muted); font-size: 12px; }
+
+    .out {
+      padding: 14px; overflow: auto; white-space: pre-wrap; flex: 1;
+    }
+    .footer { padding: 10px 14px; border-top: 1px solid var(--border); color: var(--muted); font-size: 12px; }
+    .ok { color: var(--ok); } .err { color: var(--err); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>BW-Assist <span class="badge">Etappe 1 · ohne RAG</span></h1>
+    <div class="hint">Tipps: <kbd>Strg/Cmd+Enter</kbd> senden · Verlauf exportieren</div>
+  </header>
+
+  <main class="wrap">
+    <!-- Linkes Panel: Eingabe -->
+    <section class="panel">
+      <h2>Eingabe</h2>
+      <div class="controls">
+        <div>
+          <label for="role">Rolle</label>
+          <select id="role">
+            <option value="sprach_experte">Sprach-Experte (Standard)</option>
+            <option value="disziplinar_experte">Disziplinar-/Beschwerderecht (ohne RAG)</option>
+          </select>
+          <div class="hint">
+            Hinweis zur Disziplinar-Rolle: Bitte immer konkrete Rechtsgrundlagen (z. B. §/Abs.) im Text nennen.
+          </div>
+        </div>
+
+        <div>
+          <label for="input">Text / Frage</label>
+          <textarea id="input" placeholder="Füge hier deinen Text oder Fall ein …"></textarea>
+        </div>
+
+        <div class="btns">
+          <button id="send" class="primary">Senden</button>
+          <button id="clear">Alles löschen</button>
+          <button id="export">Verlauf exportieren (.txt)</button>
+          <label>
+            <input type="file" id="import" accept=".txt" style="display:none;">
+            <button id="importBtn">Verlauf importieren</button>
+          </label>
+        </div>
+
+        <div id="status" class="hint"></div>
+      </div>
+    </section>
+
+    <!-- Rechtes Panel: Ausgabe -->
+    <section class="panel">
+      <h2>Ausgabe</h2>
+      <div id="output" class="out">Antworten erscheinen hier …</div>
+      <div class="footer">Keine automatische Speicherung. Export/Import nutzt lokale .txt-Dateien.</div>
+    </section>
+  </main>
+
+  <script>
+    const inputEl = document.getElementById('input');
+    const roleEl = document.getElementById('role');
+    const sendBtn = document.getElementById('send');
+    const clearBtn = document.getElementById('clear');
+    const exportBtn = document.getElementById('export');
+    const importBtn = document.getElementById('importBtn');
+    const importEl = document.getElementById('import');
+    const outputEl = document.getElementById('output');
+    const statusEl = document.getElementById('status');
+
+    // Kleiner Gesprächsverlauf (nur im Speicher der Seite)
+    let history = [];
+
+    function setStatus(msg, ok=false, err=false) {
+      statusEl.textContent = msg || '';
+      statusEl.className = 'hint ' + (ok ? 'ok' : err ? 'err' : '');
+    }
+
+    async function send() {
+      const message = (inputEl.value || '').trim();
+      const role = roleEl.value;
+      if (!message) return setStatus('Bitte Text eingeben.', false, true);
+
+      setStatus('Sende …'); sendBtn.disabled = true;
+
+      try {
+        const resp = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message, role })
+        });
+
+        if (!resp.ok) {
+          const t = await resp.text();
+          throw new Error(`HTTP ${resp.status}: ${t}`);
+        }
+        const data = await resp.json();
+        const reply = data.reply || '(Keine Antwort)';
+
+        history.push({ you: message, ai: reply, ts: new Date().toISOString(), role });
+        render();
+        inputEl.value = '';
+        setStatus('Fertig.', true);
+      } catch (e) {
+        console.error(e);
+        setStatus('Fehler: ' + e.message, false, true);
+      } finally {
+        sendBtn.disabled = false;
+      }
+    }
+
+    function render() {
+      const lines = [];
+      for (const item of history) {
+        lines.push(`— — — ${new Date(item.ts).toLocaleString()} [${item.role}] — — —`);
+        lines.push('Eingabe:\n' + item.you);
+        lines.push('\nAntwort:\n' + item.ai);
+        lines.push('');
+      }
+      outputEl.textContent = lines.join('\n');
+    }
+
+    function clearAll() {
+      history = [];
+      render();
+      setStatus('Verlauf gelöscht.', true);
+    }
+
+    function exportTxt() {
+      const blob = new Blob([outputEl.textContent || ''], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `bw-assist_${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.txt`;
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+      setStatus('Export gespeichert.', true);
+    }
+
+    importBtn.addEventListener('click', () => importEl.click());
+    importEl.addEventListener('change', async () => {
+      const file = importEl.files?.[0];
+      if (!file) return;
+      const text = await file.text();
+      // einfache Übernahme in die Ausgabe; keine Rekonstruktion der Blöcke nötig
+      outputEl.textContent = text;
+      setStatus('Verlauf importiert (nur Anzeige).', true);
+    });
+
+    sendBtn.addEventListener('click', send);
+    clearBtn.addEventListener('click', clearAll);
+    exportBtn.addEventListener('click', exportTxt);
+    inputEl.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') send();
+    });
+  </script>
+</body>
+</html>
