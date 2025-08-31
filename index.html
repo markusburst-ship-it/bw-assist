@@ -3,214 +3,327 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>BW-Assist (ohne RAG)</title>
+  <title>BW-Assist · Etappe 1 (ohne RAG)</title>
+  <!-- Office/Word-like: helle UI, Segoe/Calibri Look -->
   <style>
-    :root {
-      --bg: #0f172a;        /* tiefes blau/schwarz */
-      --panel: #111827;     /* dunkles grau-blau */
-      --text: #e5e7eb;      /* hellgrau */
-      --muted: #9ca3af;     /* grauton */
-      --accent: #38bdf8;    /* cyan */
-      --border: #1f2937;
-      --ok: #22c55e;
-      --err: #ef4444;
+    :root{
+      --bg: #f7f7f9;
+      --paper: #ffffff;
+      --ink: #1e1f24;
+      --muted: #6b6f76;
+      --accent: #2b579a;          /* Office/Word Blau */
+      --accent-weak:#e8f0ff;
+      --border:#dde1e6;
+      --danger:#c62828;
+      --success:#1b5e20;
+      --shadow: 0 1px 2px rgba(0,0,0,.05), 0 8px 24px rgba(0,0,0,.06);
+      --radius: 10px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
     }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0; background: var(--bg); color: var(--text);
-      font: 15px/1.5 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    html,body{height:100%}
+    body{
+      margin:0;
+      background: var(--bg);
+      color: var(--ink);
+      font: 16px/1.5 "Segoe UI", SegoeUI, Calibri, "Helvetica Neue", Arial, sans-serif;
     }
-    header {
-      padding: 14px 18px; border-bottom: 1px solid var(--border);
-      display: flex; align-items: center; justify-content: space-between;
-      background: #0b1220;
+    .app{
+      max-width: 1200px;
+      margin: 24px auto;
+      padding: 0 16px 48px;
     }
-    header h1 { margin: 0; font-size: 16px; font-weight: 600; }
-    header .badge { color: var(--muted); font-size: 12px; }
+    .ribbon{
+      background:#fff;
+      border:1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 10px 14px;
+      display:flex; gap:14px; align-items:center; flex-wrap:wrap;
+      margin-bottom:14px;
+    }
+    .ribbon h1{
+      font-size:18px; margin:0 10px 0 0; font-weight:600; color:var(--accent);
+    }
+    .sep{width:1px; height:28px; background:var(--border)}
+    select, input[type="range"]{
+      accent-color: var(--accent);
+    }
+    .pill{
+      display:inline-flex; align-items:center; gap:8px;
+      border:1px solid var(--border); background:#fff; border-radius:999px; padding:6px 10px;
+    }
+    .pill label{font-size:12px; color:var(--muted)}
+    .role, .model{
+      border:1px solid var(--border); border-radius:999px; padding:6px 10px; background:#fff;
+    }
+    .doc{
+      display:grid; grid-template-columns: 1fr 1fr; gap:16px;
+    }
+    @media (max-width: 980px){ .doc{ grid-template-columns: 1fr; } }
 
-    .wrap {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
-      padding: 12px; height: calc(100dvh - 60px);
+    .panel{
+      background: var(--paper);
+      border:1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding:16px;
+      display:flex; flex-direction:column; gap:12px;
+      min-height: 480px;
     }
-    @media (max-width: 900px) {
-      .wrap { grid-template-columns: 1fr; height: auto; }
+    .panel h2{font-size:15px; margin:0; color:#2a2d2f; letter-spacing:.2px}
+    textarea{
+      width:100%; min-height: 320px; resize: vertical;
+      border:1px solid var(--border); border-radius:8px; padding:12px 12px;
+      background:#fff; color:var(--ink); outline: none;
+      box-shadow: inset 0 1px 1px rgba(0,0,0,.03);
+      font: 15px/1.45 "Segoe UI", Calibri, Arial, sans-serif;
     }
-    .panel {
-      background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
-      display: flex; flex-direction: column; min-height: 320px;
+    .row{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
+    button{
+      border:1px solid var(--border);
+      background:#fff;
+      padding:8px 12px; border-radius:8px;
+      cursor:pointer; transition: .12s ease;
+      font-weight:600;
     }
-    .panel h2 {
-      margin: 0; padding: 12px 14px; border-bottom: 1px solid var(--border);
-      font-size: 14px; font-weight: 600; color: var(--muted);
+    button.primary{
+      background: var(--accent);
+      color:#fff; border-color: var(--accent);
     }
-    .controls { padding: 12px 14px; display: grid; gap: 10px; }
-    label { font-size: 12px; color: var(--muted); }
-
-    select, textarea, input[type="file"] {
-      width: 100%; border: 1px solid var(--border); border-radius: 10px;
-      background: #0b1220; color: var(--text); padding: 10px 12px;
+    button:hover{ transform: translateY(-1px); box-shadow: 0 2px 10px rgba(0,0,0,.06); }
+    .ghost{background:#fff}
+    .mini{
+      font-size: 13px; padding:6px 10px; border-radius: 999px; background: var(--accent-weak);
+      border-color: #cfe0ff;
     }
-    textarea { min-height: 180px; resize: vertical; }
-
-    .btns { display: flex; gap: 8px; flex-wrap: wrap; }
-    button {
-      border: 1px solid var(--border); background: #0b1220; color: var(--text);
-      padding: 10px 12px; border-radius: 10px; cursor: pointer;
+    .status{
+      font: 12px/1.4 var(--mono);
+      color: var(--muted);
+      white-space: pre-wrap;
+      background:#fafbff; border:1px dashed #cfe0ff; border-radius:8px; padding:10px;
     }
-    button.primary { border-color: #155e75; background: #083344; color: #e0f2fe; }
-    button:disabled { opacity: .6; cursor: not-allowed; }
-    .hint { color: var(--muted); font-size: 12px; }
-
-    .out {
-      padding: 14px; overflow: auto; white-space: pre-wrap; flex: 1;
+    .error{
+      border-left: 4px solid var(--danger);
+      background: #fff5f5; color:#6a1b1b;
+      border:1px solid #f2c4c4; border-left-color: var(--danger);
+      padding:10px; border-radius:8px; font-size: 14px;
     }
-    .footer { padding: 10px 14px; border-top: 1px solid var(--border); color: var(--muted); font-size: 12px; }
-    .ok { color: var(--ok); } .err { color: var(--err); }
+    .ok{ color: var(--success) }
+    .muted{ color: var(--muted) }
+    .output{
+      white-space: pre-wrap;
+      border:1px solid var(--border); border-radius:8px; padding:12px;
+      min-height: 320px; background:#fff;
+    }
+    .toolbar{ display:flex; gap:8px; flex-wrap:wrap }
+    .right{ margin-left:auto }
+    .spinner{ display:none; width:16px; height:16px; border:2px solid #cfe0ff; border-top-color:var(--accent); border-radius:50%; animation:spin .8s linear infinite }
+    .loading .spinner{ display:inline-block }
+    @keyframes spin{ to{ transform:rotate(360deg) } }
+    .footnote{ font-size:12px; color:var(--muted) }
   </style>
 </head>
 <body>
-  <header>
-    <h1>BW-Assist <span class="badge">Etappe 1 · ohne RAG</span></h1>
-    <div class="hint">Tipps: <kbd>Strg/Cmd+Enter</kbd> senden · Verlauf exportieren</div>
-  </header>
+  <div class="app">
+    <div class="ribbon">
+      <h1>BW-Assist</h1><span class="muted">Etappe 1 · ohne RAG</span>
+      <div class="sep"></div>
 
-  <main class="wrap">
-    <!-- Linkes Panel: Eingabe -->
-    <section class="panel">
-      <h2>Eingabe</h2>
-      <div class="controls">
-        <div>
-          <label for="role">Rolle</label>
-          <select id="role">
-            <option value="sprach_experte">Sprach-Experte (Standard)</option>
-            <option value="disziplinar_experte">Disziplinar-/Beschwerderecht (ohne RAG)</option>
-          </select>
-          <div class="hint">
-            Hinweis zur Disziplinar-Rolle: Bitte immer konkrete Rechtsgrundlagen (z. B. §/Abs.) im Text nennen.
+      <!-- (2) Rollen-Presets -->
+      <select id="role" class="role" title="Rolle">
+        <option value="sprach_experte">Sprach-Experte (Standard)</option>
+        <option value="disziplinar_experte">Disziplinar-/Beschwerderecht (mit §/Abs.)</option>
+      </select>
+
+      <!-- (3) Model & Temperatur -->
+      <div class="pill">
+        <label for="model">Modell</label>
+        <select id="model" class="model" title="Modell">
+          <option value="gpt-4o-mini" selected>gpt-4o-mini (preiswert)</option>
+          <option value="o4-mini">o4-mini (stärker)</option>
+          <option value="gpt-4.1-mini">gpt-4.1-mini</option>
+        </select>
+      </div>
+
+      <div class="pill">
+        <label for="temp">Temperatur</label>
+        <input id="temp" type="range" min="0" max="1" step="0.1" value="0.2" />
+      </div>
+
+      <div class="right pill">
+        <span class="spinner" id="spin"></span>
+        <span id="status" class="muted">Bereit</span>
+      </div>
+    </div>
+
+    <div class="doc">
+      <!-- Eingabe -->
+      <section class="panel">
+        <h2>Eingabe</h2>
+        <div class="footnote">
+          Hinweis zur Disziplinar-Rolle: Bitte immer konkrete Rechtsgrundlagen nennen (z. B. §/Abs.). Ohne Quellen wird um Präzisierung gebeten.
+        </div>
+
+        <textarea id="input" placeholder="Füge hier deinen Text oder Fall ein …"></textarea>
+
+        <!-- Mini-Prompt-Buttons (2) -->
+        <div class="toolbar">
+          <button class="mini" data-hint="Bitte den Text straffen (max. 30 % kürzer). Kernaussagen beibehalten.">Kürzen</button>
+          <button class="mini" data-hint="Formaler formulieren: dienstlicher Stil, höflich, präzise, aktiv.">Formaler</button>
+          <button class="mini" data-hint="Klarer formulieren: kurze Sätze, eindeutige Verben, überflüssiges streichen.">Klarer</button>
+
+          <div class="right row">
+            <button id="send" class="primary">Senden</button>
+            <button id="clear" class="ghost">Alles löschen</button>
+            <button id="export" class="ghost">Verlauf exportieren (.txt)</button>
+            <label class="ghost" style="padding:8px 12px; border-radius:8px; cursor:pointer;">
+              Verlauf importieren
+              <input id="import" type="file" accept=".txt,text/plain" hidden />
+            </label>
           </div>
         </div>
 
-        <div>
-          <label for="input">Text / Frage</label>
-          <textarea id="input" placeholder="Füge hier deinen Text oder Fall ein …"></textarea>
-        </div>
+        <!-- (1) Fehler-UX -->
+        <div id="err" class="error" style="display:none"></div>
+        <div id="diag" class="status" style="display:none"></div>
+      </section>
 
-        <div class="btns">
-          <button id="send" class="primary">Senden</button>
-          <button id="clear">Alles löschen</button>
-          <button id="export">Verlauf exportieren (.txt)</button>
-          <label>
-            <input type="file" id="import" accept=".txt" style="display:none;">
-            <button id="importBtn">Verlauf importieren</button>
-          </label>
-        </div>
-
-        <div id="status" class="hint"></div>
-      </div>
-    </section>
-
-    <!-- Rechtes Panel: Ausgabe -->
-    <section class="panel">
-      <h2>Ausgabe</h2>
-      <div id="output" class="out">Antworten erscheinen hier …</div>
-      <div class="footer">Keine automatische Speicherung. Export/Import nutzt lokale .txt-Dateien.</div>
-    </section>
-  </main>
+      <!-- Ausgabe -->
+      <section class="panel">
+        <h2>Ausgabe</h2>
+        <div id="out" class="output">Antworten erscheinen hier …</div>
+      </section>
+    </div>
+  </div>
 
   <script>
-    const inputEl = document.getElementById('input');
-    const roleEl = document.getElementById('role');
-    const sendBtn = document.getElementById('send');
-    const clearBtn = document.getElementById('clear');
-    const exportBtn = document.getElementById('export');
-    const importBtn = document.getElementById('importBtn');
-    const importEl = document.getElementById('import');
-    const outputEl = document.getElementById('output');
-    const statusEl = document.getElementById('status');
+    // ==== UI Helpers ====
+    const $ = (s)=>document.querySelector(s);
+    const input = $("#input"), out = $("#out");
+    const role = $("#role"), model = $("#model"), temp = $("#temp");
+    const errBox = $("#err"), diag = $("#diag"), statusLbl = $("#status");
+    const spin = $("#spin"); const app = document.body;
 
-    // Kleiner Gesprächsverlauf (nur im Speicher der Seite)
-    let history = [];
-
-    function setStatus(msg, ok=false, err=false) {
-      statusEl.textContent = msg || '';
-      statusEl.className = 'hint ' + (ok ? 'ok' : err ? 'err' : '');
+    function setBusy(on, msg="Verarbeite …"){
+      app.classList.toggle("loading", !!on);
+      statusLbl.textContent = on ? msg : "Bereit";
     }
-
-    async function send() {
-      const message = (inputEl.value || '').trim();
-      const role = roleEl.value;
-      if (!message) return setStatus('Bitte Text eingeben.', false, true);
-
-      setStatus('Sende …'); sendBtn.disabled = true;
-
-      try {
-        const resp = await fetch('/api/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message, role })
-        });
-
-        if (!resp.ok) {
-          const t = await resp.text();
-          throw new Error(`HTTP ${resp.status}: ${t}`);
-        }
-        const data = await resp.json();
-        const reply = data.reply || '(Keine Antwort)';
-
-        history.push({ you: message, ai: reply, ts: new Date().toISOString(), role });
-        render();
-        inputEl.value = '';
-        setStatus('Fertig.', true);
-      } catch (e) {
-        console.error(e);
-        setStatus('Fehler: ' + e.message, false, true);
-      } finally {
-        sendBtn.disabled = false;
-      }
+    function showErr(msg, rid){
+      errBox.style.display="block";
+      errBox.innerHTML = `<strong>Fehler:</strong> ${msg}${rid?`<br><span class="muted">Request-ID: ${rid}</span>`:""}`;
     }
-
-    function render() {
-      const lines = [];
-      for (const item of history) {
-        lines.push(`— — — ${new Date(item.ts).toLocaleString()} [${item.role}] — — —`);
-        lines.push('Eingabe:\n' + item.you);
-        lines.push('\nAntwort:\n' + item.ai);
-        lines.push('');
-      }
-      outputEl.textContent = lines.join('\n');
+    function clearErr(){ errBox.style.display="none"; errBox.textContent=""; }
+    function showDiag(lines){
+      diag.style.display="block";
+      diag.textContent = lines.join("\n");
     }
+    function clearDiag(){ diag.style.display="none"; diag.textContent=""; }
 
-    function clearAll() {
-      history = [];
-      render();
-      setStatus('Verlauf gelöscht.', true);
-    }
-
-    function exportTxt() {
-      const blob = new Blob([outputEl.textContent || ''], { type: 'text/plain;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = `bw-assist_${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.txt`;
-      document.body.appendChild(a); a.click(); a.remove();
-      URL.revokeObjectURL(url);
-      setStatus('Export gespeichert.', true);
-    }
-
-    importBtn.addEventListener('click', () => importEl.click());
-    importEl.addEventListener('change', async () => {
-      const file = importEl.files?.[0];
-      if (!file) return;
-      const text = await file.text();
-      // einfache Übernahme in die Ausgabe; keine Rekonstruktion der Blöcke nötig
-      outputEl.textContent = text;
-      setStatus('Verlauf importiert (nur Anzeige).', true);
+    // Mini-Prompts: fügen höfliche Kurz-Instruktion an den Eingabetext an
+    document.querySelectorAll(".mini").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        const hint = btn.getAttribute("data-hint");
+        const txt = input.value.trim();
+        input.value = txt ? `${txt}\n\n[Hinweis: ${hint}]` : hint;
+        input.focus();
+      });
     });
 
-    sendBtn.addEventListener('click', send);
-    clearBtn.addEventListener('click', clearAll);
-    exportBtn.addEventListener('click', exportTxt);
-    inputEl.addEventListener('keydown', (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') send();
+    // ==== Request-ID generator (für Logs) ====
+    const rid = ()=>"r"+Math.random().toString(36).slice(2,10);
+
+    // ==== Senden ====
+    $("#send").addEventListener("click", async ()=>{
+      clearErr(); clearDiag();
+      const text = input.value.trim();
+      if(!text){ showErr("Bitte Text eingeben."); return; }
+
+      const reqId = rid();
+      const payload = {
+        role: role.value,
+        message: text,
+        model: model.value,
+        temperature: Number(temp.value),
+        requestId: reqId
+      };
+
+      setBusy(true, "Anfrage wird gesendet …");
+      try{
+        const res = await fetch("/api/chat",{
+          method:"POST",
+          headers:{ "Content-Type":"application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        const isJson = (res.headers.get("content-type")||"").includes("application/json");
+        const data = isJson ? await res.json() : { error: await res.text() };
+
+        if(!res.ok){
+          showErr(data?.error || "Serverfehler", data?.requestId || reqId);
+          showDiag([
+            `HTTP ${res.status}`,
+            `RID: ${data?.requestId || reqId}`,
+            data?.detail ? `Detail: ${data.detail}` : ""
+          ].filter(Boolean));
+          return;
+        }
+
+        out.textContent = data.reply || "(leer)";
+        showDiag([
+          `OK · Modell: ${model.value} · Temp: ${temp.value}`,
+          `RID: ${data.requestId || reqId}`
+        ]);
+      }catch(e){
+        showErr("Netzwerkfehler oder Timeout.", reqId);
+        showDiag([String(e)]);
+      }finally{
+        setBusy(false);
+      }
+    });
+
+    // ==== Clear ====
+    $("#clear").addEventListener("click", ()=>{
+      input.value=""; out.textContent = "Antworten erscheinen hier …";
+      clearErr(); clearDiag();
+    });
+
+    // ==== Export (.txt) mit Datum, Rolle (7) ====
+    $("#export").addEventListener("click", ()=>{
+      const dt = new Date();
+      const stamp = dt.toISOString().replace(/[:.]/g,"-").slice(0,19);
+      const roleTag = role.value === "sprach_experte" ? "sprach" : "disz";
+      const content =
+`[BW-Assist Export]
+Datum: ${dt.toLocaleString()}
+Rolle: ${role.value}
+Modell: ${model.value}
+Temperatur: ${temp.value}
+
+--- Eingabe ---
+${input.value}
+
+--- Ausgabe ---
+${out.textContent}
+`;
+      const blob = new Blob([content], {type:"text/plain;charset=utf-8"});
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `bw-assist_${roleTag}_${stamp}.txt`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    });
+
+    // ==== Import (.txt) (7) ====
+    $("#import").addEventListener("change", async (ev)=>{
+      const f = ev.target.files?.[0];
+      if(!f) return;
+      const text = await f.text();
+      // heuristisch splitten
+      const inMatch = text.split("--- Eingabe ---")[1]?.split("--- Ausgabe ---")[0]?.trim();
+      const outMatch = text.split("--- Ausgabe ---")[1]?.trim();
+      if(inMatch) input.value = inMatch;
+      if(outMatch) out.textContent = outMatch;
+      clearErr(); clearDiag();
     });
   </script>
 </body>
