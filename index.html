@@ -3,139 +3,79 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>BW-Assist · Etappe 1 (ohne RAG)</title>
-  <!-- Office/Word-like: helle UI, Segoe/Calibri Look -->
+  <title>BW-Assist</title>
   <style>
     :root{
-      --bg: #f7f7f9;
-      --paper: #ffffff;
-      --ink: #1e1f24;
-      --muted: #6b6f76;
-      --accent: #2b579a;          /* Office/Word Blau */
-      --accent-weak:#e8f0ff;
-      --border:#dde1e6;
-      --danger:#c62828;
-      --success:#1b5e20;
-      --shadow: 0 1px 2px rgba(0,0,0,.05), 0 8px 24px rgba(0,0,0,.06);
-      --radius: 10px;
-      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      --bg:#f7f7f9; --paper:#fff; --ink:#1e1f24; --muted:#6b6f76;
+      --accent:#2b579a; --accent-weak:#e8f0ff; --border:#dde1e6;
+      --danger:#c62828; --success:#1b5e20; --shadow:0 1px 2px rgba(0,0,0,.05), 0 8px 24px rgba(0,0,0,.06);
+      --radius:10px; --mono: ui-monospace, Menlo, Consolas, "Liberation Mono", monospace;
     }
     html,body{height:100%}
     body{
-      margin:0;
-      background: var(--bg);
-      color: var(--ink);
-      font: 16px/1.5 "Segoe UI", SegoeUI, Calibri, "Helvetica Neue", Arial, sans-serif;
+      margin:0; background:var(--bg); color:var(--ink);
+      font:16px/1.5 "Segoe UI", SegoeUI, Calibri, "Helvetica Neue", Arial, sans-serif;
     }
-    .app{
-      max-width: 1200px;
-      margin: 24px auto;
-      padding: 0 16px 48px;
-    }
+    .app{max-width:1200px; margin:24px auto; padding:0 16px 48px;}
     .ribbon{
-      background:#fff;
-      border:1px solid var(--border);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      padding: 10px 14px;
-      display:flex; gap:14px; align-items:center; flex-wrap:wrap;
-      margin-bottom:14px;
+      background:#fff; border:1px solid var(--border); border-radius:var(--radius);
+      box-shadow:var(--shadow); padding:10px 14px; display:flex; gap:14px; align-items:center; flex-wrap:wrap; margin-bottom:14px;
     }
-    .ribbon h1{
-      font-size:18px; margin:0 10px 0 0; font-weight:600; color:var(--accent);
-    }
+    .ribbon h1{font-size:18px; margin:0 10px 0 0; font-weight:600; color:var(--accent);}
     .sep{width:1px; height:28px; background:var(--border)}
-    select, input[type="range"]{
-      accent-color: var(--accent);
-    }
-    .pill{
-      display:inline-flex; align-items:center; gap:8px;
-      border:1px solid var(--border); background:#fff; border-radius:999px; padding:6px 10px;
-    }
+    .pill{display:inline-flex; align-items:center; gap:8px; border:1px solid var(--border); background:#fff; border-radius:999px; padding:6px 10px;}
     .pill label{font-size:12px; color:var(--muted)}
-    .role, .model{
-      border:1px solid var(--border); border-radius:999px; padding:6px 10px; background:#fff;
-    }
-    .doc{
-      display:grid; grid-template-columns: 1fr 1fr; gap:16px;
-    }
-    @media (max-width: 980px){ .doc{ grid-template-columns: 1fr; } }
-
+    .role, .model{border:1px solid var(--border); border-radius:999px; padding:6px 10px; background:#fff;}
+    .doc{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+    @media(max-width:980px){ .doc{grid-template-columns:1fr;} }
     .panel{
-      background: var(--paper);
-      border:1px solid var(--border);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      padding:16px;
-      display:flex; flex-direction:column; gap:12px;
-      min-height: 480px;
+      background:var(--paper); border:1px solid var(--border); border-radius:var(--radius);
+      box-shadow:var(--shadow); padding:16px; display:flex; flex-direction:column; gap:12px; min-height:520px;
     }
     .panel h2{font-size:15px; margin:0; color:#2a2d2f; letter-spacing:.2px}
+    .hint{font-size:12px; color:var(--muted)}
     textarea{
-      width:100%; min-height: 320px; resize: vertical;
-      border:1px solid var(--border); border-radius:8px; padding:12px 12px;
-      background:#fff; color:var(--ink); outline: none;
-      box-shadow: inset 0 1px 1px rgba(0,0,0,.03);
-      font: 15px/1.45 "Segoe UI", Calibri, Arial, sans-serif;
+      width:100%; flex:1 1 auto; min-height:320px; resize:vertical;
+      border:1px solid var(--border); border-radius:8px; padding:12px;
+      background:#fff; color:var(--ink); outline:none; box-shadow: inset 0 1px 1px rgba(0,0,0,.03);
+      font:15px/1.45 "Segoe UI", Calibri, Arial, sans-serif;
     }
     .row{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
     button{
-      border:1px solid var(--border);
-      background:#fff;
-      padding:8px 12px; border-radius:8px;
-      cursor:pointer; transition: .12s ease;
-      font-weight:600;
+      border:1px solid var(--border); background:#fff; padding:8px 12px; border-radius:8px; cursor:pointer; transition:.12s ease; font-weight:600;
     }
-    button.primary{
-      background: var(--accent);
-      color:#fff; border-color: var(--accent);
-    }
-    button:hover{ transform: translateY(-1px); box-shadow: 0 2px 10px rgba(0,0,0,.06); }
-    .ghost{background:#fff}
-    .mini{
-      font-size: 13px; padding:6px 10px; border-radius: 999px; background: var(--accent-weak);
-      border-color: #cfe0ff;
-    }
-    .status{
-      font: 12px/1.4 var(--mono);
-      color: var(--muted);
-      white-space: pre-wrap;
-      background:#fafbff; border:1px dashed #cfe0ff; border-radius:8px; padding:10px;
-    }
-    .error{
-      border-left: 4px solid var(--danger);
-      background: #fff5f5; color:#6a1b1b;
-      border:1px solid #f2c4c4; border-left-color: var(--danger);
-      padding:10px; border-radius:8px; font-size: 14px;
-    }
-    .ok{ color: var(--success) }
-    .muted{ color: var(--muted) }
-    .output{
-      white-space: pre-wrap;
-      border:1px solid var(--border); border-radius:8px; padding:12px;
-      min-height: 320px; background:#fff;
-    }
-    .toolbar{ display:flex; gap:8px; flex-wrap:wrap }
-    .right{ margin-left:auto }
-    .spinner{ display:none; width:16px; height:16px; border:2px solid #cfe0ff; border-top-color:var(--accent); border-radius:50%; animation:spin .8s linear infinite }
-    .loading .spinner{ display:inline-block }
-    @keyframes spin{ to{ transform:rotate(360deg) } }
-    .footnote{ font-size:12px; color:var(--muted) }
+    button.primary{background:var(--accent); color:#fff; border-color:var(--accent);}
+    button:hover{transform:translateY(-1px); box-shadow:0 2px 10px rgba(0,0,0,.06);}
+    .mini{font-size:13px; padding:6px 10px; border-radius:999px; background:var(--accent-weak); border-color:#cfe0ff;}
+    .status{font:12px/1.4 var(--mono); color:var(--muted); white-space:pre-wrap; background:#fafbff; border:1px dashed #cfe0ff; border-radius:8px; padding:10px;}
+    .error{border-left:4px solid var(--danger); background:#fff5f5; color:#6a1b1b; border:1px solid #f2c4c4; padding:10px; border-radius:8px; font-size:14px;}
+    .muted{color:var(--muted)}
+    .output{white-space:pre-wrap; border:1px solid var(--border); border-radius:8px; padding:12px; flex:1 1 auto; min-height:320px; background:#fff;}
+    .toolbar{display:flex; gap:8px; flex-wrap:wrap}
+    .right{margin-left:auto}
+    .spinner{display:none; width:16px; height:16px; border:2px solid #cfe0ff; border-top-color:var(--accent); border-radius:50%; animation:spin .8s linear infinite}
+    .loading .spinner{display:inline-block}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .footnote{font-size:12px; color:var(--muted)}
+    .tlegend{display:flex; gap:8px; align-items:center; font-size:12px; color:var(--muted)}
+    .chip{padding:2px 8px; border:1px solid var(--border); border-radius:999px; background:#fff}
+    .strong{color:var(--accent); font-weight:600}
   </style>
 </head>
 <body>
   <div class="app">
     <div class="ribbon">
-      <h1>BW-Assist</h1><span class="muted">Etappe 1 · ohne RAG</span>
+      <h1>BW-Assist</h1>
+
       <div class="sep"></div>
 
-      <!-- (2) Rollen-Presets -->
+      <!-- Rollen -->
       <select id="role" class="role" title="Rolle">
-        <option value="sprach_experte">Sprach-Experte (Standard)</option>
+        <option value="sprach_experte" selected>Sprach-Experte (Standard)</option>
         <option value="disziplinar_experte">Disziplinar-/Beschwerderecht (mit §/Abs.)</option>
       </select>
 
-      <!-- (3) Model & Temperatur -->
+      <!-- Modell -->
       <div class="pill">
         <label for="model">Modell</label>
         <select id="model" class="model" title="Modell">
@@ -145,14 +85,24 @@
         </select>
       </div>
 
-      <div class="pill">
+      <!-- Temperatur -->
+      <div class="pill" style="gap:12px">
         <label for="temp">Temperatur</label>
         <input id="temp" type="range" min="0" max="1" step="0.1" value="0.2" />
+        <span id="tlabel" class="strong">0.2 · deterministisch</span>
       </div>
 
       <div class="right pill">
         <span class="spinner" id="spin"></span>
         <span id="status" class="muted">Bereit</span>
+      </div>
+
+      <!-- Legende Temperatur -->
+      <div class="tlegend" style="width:100%; margin-left:4px;">
+        <span class="chip">0.0–0.2: <b>sehr deterministisch</b> (juristisch, „aktenfest“)</span>
+        <span class="chip">0.3–0.5: ausgewogen (leicht variierend)</span>
+        <span class="chip">0.6–0.8: kreativer (mehr Umformulierungen)</span>
+        <span class="chip">0.9–1.0: sehr frei (Riskio ↑)</span>
       </div>
     </div>
 
@@ -160,17 +110,18 @@
       <!-- Eingabe -->
       <section class="panel">
         <h2>Eingabe</h2>
-        <div class="footnote">
+
+        <!-- Hinweis nur für Disziplinar-Rolle -->
+        <div id="roleHint" class="hint" style="display:none">
           Hinweis zur Disziplinar-Rolle: Bitte immer konkrete Rechtsgrundlagen nennen (z. B. §/Abs.). Ohne Quellen wird um Präzisierung gebeten.
         </div>
 
         <textarea id="input" placeholder="Füge hier deinen Text oder Fall ein …"></textarea>
 
-        <!-- Mini-Prompt-Buttons (2) -->
         <div class="toolbar">
           <button class="mini" data-hint="Bitte den Text straffen (max. 30 % kürzer). Kernaussagen beibehalten.">Kürzen</button>
           <button class="mini" data-hint="Formaler formulieren: dienstlicher Stil, höflich, präzise, aktiv.">Formaler</button>
-          <button class="mini" data-hint="Klarer formulieren: kurze Sätze, eindeutige Verben, überflüssiges streichen.">Klarer</button>
+          <button class="mini" data-hint="Klarer formulieren: kurze Sätze, eindeutige Verben, Überflüssiges streichen.">Klarer</button>
 
           <div class="right row">
             <button id="send" class="primary">Senden</button>
@@ -183,7 +134,8 @@
           </div>
         </div>
 
-        <!-- (1) Fehler-UX -->
+        <div class="footnote">Tipp: <b>Enter</b> sendet · <b>Shift+Enter</b> fügt Zeilenumbruch ein.</div>
+
         <div id="err" class="error" style="display:none"></div>
         <div id="diag" class="status" style="display:none"></div>
       </section>
@@ -197,29 +149,32 @@
   </div>
 
   <script>
-    // ==== UI Helpers ====
     const $ = (s)=>document.querySelector(s);
-    const input = $("#input"), out = $("#out");
-    const role = $("#role"), model = $("#model"), temp = $("#temp");
-    const errBox = $("#err"), diag = $("#diag"), statusLbl = $("#status");
-    const spin = $("#spin"); const app = document.body;
+    const input=$("#input"), out=$("#out");
+    const role=$("#role"), model=$("#model"), temp=$("#temp"), tlabel=$("#tlabel");
+    const roleHint=$("#roleHint");
+    const errBox=$("#err"), diag=$("#diag"), statusLbl=$("#status");
+    const app=document.body;
 
-    function setBusy(on, msg="Verarbeite …"){
-      app.classList.toggle("loading", !!on);
-      statusLbl.textContent = on ? msg : "Bereit";
+    // Temperatur-Label
+    function tempLabel(v){
+      const n = Number(v);
+      if (n <= 0.2) return `${n.toFixed(1)} · deterministisch`;
+      if (n <= 0.5) return `${n.toFixed(1)} · ausgewogen`;
+      if (n <= 0.8) return `${n.toFixed(1)} · kreativer`;
+      return `${n.toFixed(1)} · sehr frei`;
     }
-    function showErr(msg, rid){
-      errBox.style.display="block";
-      errBox.innerHTML = `<strong>Fehler:</strong> ${msg}${rid?`<br><span class="muted">Request-ID: ${rid}</span>`:""}`;
-    }
-    function clearErr(){ errBox.style.display="none"; errBox.textContent=""; }
-    function showDiag(lines){
-      diag.style.display="block";
-      diag.textContent = lines.join("\n");
-    }
-    function clearDiag(){ diag.style.display="none"; diag.textContent=""; }
+    tlabel.textContent = tempLabel(temp.value);
+    temp.addEventListener("input", ()=> tlabel.textContent = tempLabel(temp.value));
 
-    // Mini-Prompts: fügen höfliche Kurz-Instruktion an den Eingabetext an
+    // Hinweis nur bei Disziplinar-Rolle
+    function updateHint(){
+      roleHint.style.display = role.value === "disziplinar_experte" ? "block" : "none";
+    }
+    updateHint();
+    role.addEventListener("change", updateHint);
+
+    // Mini-Prompts
     document.querySelectorAll(".mini").forEach(btn=>{
       btn.addEventListener("click", ()=>{
         const hint = btn.getAttribute("data-hint");
@@ -229,10 +184,29 @@
       });
     });
 
-    // ==== Request-ID generator (für Logs) ====
+    // Enter sendet, Shift+Enter = newline
+    input.addEventListener("keydown", (e)=>{
+      if (e.key === "Enter" && !e.shiftKey){
+        e.preventDefault();
+        $("#send").click();
+      }
+    });
+
+    // Busy/Status
+    function setBusy(on,msg="Verarbeite …"){
+      app.classList.toggle("loading", !!on);
+      statusLbl.textContent = on ? msg : "Bereit";
+    }
+    function showErr(msg,rid){
+      errBox.style.display="block";
+      errBox.innerHTML = `<strong>Fehler:</strong> ${msg}${rid?`<br><span class="muted">Request-ID: ${rid}</span>`:""}`;
+    }
+    function clearErr(){ errBox.style.display="none"; errBox.textContent=""; }
+    function showDiag(lines){ diag.style.display="block"; diag.textContent=lines.join("\n"); }
+    function clearDiag(){ diag.style.display="none"; diag.textContent=""; }
     const rid = ()=>"r"+Math.random().toString(36).slice(2,10);
 
-    // ==== Senden ====
+    // Senden
     $("#send").addEventListener("click", async ()=>{
       clearErr(); clearDiag();
       const text = input.value.trim();
@@ -250,14 +224,10 @@
       setBusy(true, "Anfrage wird gesendet …");
       try{
         const res = await fetch("/api/chat",{
-          method:"POST",
-          headers:{ "Content-Type":"application/json" },
-          body: JSON.stringify(payload)
+          method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify(payload)
         });
-
         const isJson = (res.headers.get("content-type")||"").includes("application/json");
         const data = isJson ? await res.json() : { error: await res.text() };
-
         if(!res.ok){
           showErr(data?.error || "Serverfehler", data?.requestId || reqId);
           showDiag([
@@ -267,31 +237,23 @@
           ].filter(Boolean));
           return;
         }
-
         out.textContent = data.reply || "(leer)";
-        showDiag([
-          `OK · Modell: ${model.value} · Temp: ${temp.value}`,
-          `RID: ${data.requestId || reqId}`
-        ]);
+        showDiag([`OK · Modell: ${model.value} · Temp: ${temp.value}`, `RID: ${data.requestId || reqId}`]);
       }catch(e){
         showErr("Netzwerkfehler oder Timeout.", reqId);
         showDiag([String(e)]);
-      }finally{
-        setBusy(false);
-      }
+      }finally{ setBusy(false); }
     });
 
-    // ==== Clear ====
+    // Clear
     $("#clear").addEventListener("click", ()=>{
-      input.value=""; out.textContent = "Antworten erscheinen hier …";
-      clearErr(); clearDiag();
+      input.value=""; out.textContent="Antworten erscheinen hier …"; clearErr(); clearDiag();
     });
 
-    // ==== Export (.txt) mit Datum, Rolle (7) ====
+    // Export
     $("#export").addEventListener("click", ()=>{
-      const dt = new Date();
-      const stamp = dt.toISOString().replace(/[:.]/g,"-").slice(0,19);
-      const roleTag = role.value === "sprach_experte" ? "sprach" : "disz";
+      const dt=new Date(); const stamp=dt.toISOString().replace(/[:.]/g,"-").slice(0,19);
+      const roleTag = role.value==="sprach_experte" ? "sprach" : "disz";
       const content =
 `[BW-Assist Export]
 Datum: ${dt.toLocaleString()}
@@ -305,24 +267,19 @@ ${input.value}
 --- Ausgabe ---
 ${out.textContent}
 `;
-      const blob = new Blob([content], {type:"text/plain;charset=utf-8"});
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = `bw-assist_${roleTag}_${stamp}.txt`;
-      a.click();
-      URL.revokeObjectURL(a.href);
+      const blob=new Blob([content],{type:"text/plain;charset=utf-8"});
+      const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+      a.download=`bw-assist_${roleTag}_${stamp}.txt`; a.click(); URL.revokeObjectURL(a.href);
     });
 
-    // ==== Import (.txt) (7) ====
+    // Import
     $("#import").addEventListener("change", async (ev)=>{
-      const f = ev.target.files?.[0];
-      if(!f) return;
-      const text = await f.text();
-      // heuristisch splitten
-      const inMatch = text.split("--- Eingabe ---")[1]?.split("--- Ausgabe ---")[0]?.trim();
-      const outMatch = text.split("--- Ausgabe ---")[1]?.trim();
-      if(inMatch) input.value = inMatch;
-      if(outMatch) out.textContent = outMatch;
+      const f=ev.target.files?.[0]; if(!f) return;
+      const text=await f.text();
+      const inMatch=text.split("--- Eingabe ---")[1]?.split("--- Ausgabe ---")[0]?.trim();
+      const outMatch=text.split("--- Ausgabe ---")[1]?.trim();
+      if(inMatch) input.value=inMatch;
+      if(outMatch) out.textContent=outMatch;
       clearErr(); clearDiag();
     });
   </script>
