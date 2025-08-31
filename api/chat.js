@@ -1,15 +1,12 @@
 // api/chat.js
-// Zweck: Eine einfache POST-Route /api/chat für deine Web-App.
-// Modus: Kein RAG. Zwei Rollen:
-//  - "sprach_experte" (Standard): überarbeitet Texte für dienstlichen Schriftverkehr (Bundeswehr-Stil).
-//  - "disziplinar_experte": beantwortet nur, wenn du im Text eine konkrete Rechtsgrundlage nennst;
-//    sonst fordert die Antwort dich auf, eine Quelle/Norm zu nennen (damit nichts „erfunden“ wird).
-
-const fetch = require("node-fetch");
+// Vercel Serverless Function (Node 18).
+// Robuste Body-Parsing-Logik + klare Fehlermeldungen.
+// Etappe 1: KEIN RAG. Zwei Rollen: "sprach_experte" (Standard) & "disziplinar_experte".
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-// Modell: klein, schnell, günstig – gut fürs tägliche Schreiben
 const CHAT_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
+
+// --- Hilfsfunktionen ---------------------------------------------------------
 
 function cors(res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -21,21 +18,40 @@ function systemPrompt(role) {
   if (role === "disziplinar_experte") {
     return (
       "Du bist Disziplinar- und Beschwerderecht-Experte (Bundeswehr). " +
-      "Wichtig: Es ist KEIN externer Rechtsdatenzugriff aktiv. " +
+      "Achtung: Es ist KEIN externer Rechtsdatenzugriff aktiv. " +
       "Antworte nur auf Grundlage der vom Nutzer genannten Rechtsquellen (z. B. §/Abs.). " +
       "Wenn keine Quelle angegeben ist, fordere präzise §-Angaben an (keine Mutmaßungen). " +
       "Stil: formal, präzise, fehlerfrei, gut verständlich, leicht militärisch, nicht akademisch. " +
       "Struktur: (1) Kurzbewertung, (2) Begründung mit Bezug auf die genannte Norm, (3) Empfehlung."
     );
   }
-  // Standardrolle
   return (
     "Du bist Sprach- und Stilberater für dienstlichen E-Mail- und Schriftverkehr in der Bundeswehr. " +
     "Ziel: formal, präzise, fehlerfrei, klar und gut verständlich. " +
-    "Kein Marketing-Sprech, kein Umgangston, kein unnötiger Zierrat. " +
     "Verbessere Grammatik, Rechtschreibung, Zeichensetzung und Struktur. " +
-    "Liefere das Ergebnis als finalen Text und nenne optional 2–3 knappe Verbesserungshinweise."
+    "Liefere den finalen Text und nenne optional 2–3 knappe Verbesserungshinweise."
   );
+}
+
+// Body sicher einlesen (Vercel setzt req.body nicht immer)
+async function readJsonBody(req) {
+  try {
+    // Falls Vercel/Framework bereits geparst hat:
+    if (req.body && typeof req.body === "object") return req.body;
+
+    // Sonst Stream lesen:
+    const chunks = [];
+    for await (const chunk of req) chunks.push(chunk);
+    const raw = Buffer.concat(chunks).toString("utf8").trim();
+    if (!raw) return {};
+    if (req.headers["content-type"]?.includes("application/json")) {
+      return JSON.parse(raw);
+    }
+    // Fallback: versuchen zu parsen, sonst leeres Objekt
+    try { return JSON.parse(raw); } catch { return {}; }
+  } catch {
+    return {};
+  }
 }
 
 async function chatCompletion(messages) {
@@ -51,33 +67,41 @@ async function chatCompletion(messages) {
       messages,
     }),
   });
+
   if (!resp.ok) {
     const detail = await resp.text();
-    throw new Error(`OpenAI error: ${resp.status} ${detail}`);
+    // Kompakte, lesbare Fehlerweitergabe:
+    throw new Error(`OpenAI ${resp.status}: ${detail}`);
   }
+
   const data = await resp.json();
   return data.choices?.[0]?.message?.content?.trim() || "";
 }
 
+// --- Handler -----------------------------------------------------------------
+
 module.exports = async (req, res) => {
   cors(res);
+
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
+
   if (!OPENAI_API_KEY) {
-    return res
-      .status(500)
-      .json({ error: "Server misconfigured: OPENAI_API_KEY is missing" });
+    return res.status(500).json({
+      error: "Server misconfigured: OPENAI_API_KEY missing",
+      hint: "In Vercel -> Project Settings -> Environment Variables setzen und redeployen.",
+    });
   }
 
   try {
-    const body = req.body || {};
+    const body = await readJsonBody(req);
     const message = typeof body.message === "string" ? body.message.trim() : "";
     const role = body.role === "disziplinar_experte" ? "disziplinar_experte" : "sprach_experte";
 
     if (!message) {
-      return res.status(400).json({ error: 'Missing "message" (string)' });
+      return res.status(400).json({ error: 'Missing "message" (string) in JSON body.' });
     }
 
     const sys = systemPrompt(role);
@@ -94,9 +118,11 @@ module.exports = async (req, res) => {
     const reply = await chatCompletion(messages);
     return res.status(200).json({ reply });
   } catch (err) {
-    console.error(err);
-    return res
-      .status(500)
-      .json({ error: "Server error", detail: String(err.message || err) });
+    // Log für Vercel-Logs, kurze, verständliche Antwort zum Client
+    console.error("[/api/chat] Error:", err);
+    return res.status(502).json({
+      error: "Upstream error (OpenAI oder Body-Parsing)",
+      detail: String(err?.message || err),
+    });
   }
 };
