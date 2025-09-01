@@ -10,15 +10,16 @@
       --bg:#f4f5f7; --paper:#ffffff; --ink:#1f2328; --muted:#66707a;
       --accent:#2b579a; --accent-weak:#eff4ff; --border:#d7dbe0;
       --shadow:0 1px 2px rgba(0,0,0,.05), 0 8px 24px rgba(0,0,0,.06);
-      --radius:10px; --mono: ui-monospace, Menlo, Consolas, "Liberation Mono", monospace;
+      --radius:12px; --mono: ui-monospace, Menlo, Consolas, "Liberation Mono", monospace;
     }
     html,body{height:100%}
     body{
       margin:0; background:var(--bg); color:var(--ink);
       font:15.5px/1.5 "Segoe UI", SegoeUI, Calibri, "Helvetica Neue", Arial, sans-serif;
+      -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
     }
 
-    /* Ribbon */
+    /* Ribbon (oben) */
     .ribbon-wrap{
       position:sticky; top:0; z-index:10;
       background:linear-gradient(#ffffff,#fafbff);
@@ -36,36 +37,51 @@
     }
     .brand h1{font-size:18px; margin:0; font-weight:700; color:var(--accent);}
     .sep{width:1px; height:32px; background:var(--border)}
-    .pill{display:inline-flex; align-items:center; gap:8px; border:1px solid var(--border);
-      background:#fff; border-radius:999px; padding:6px 10px}
+
+    .pill{
+      display:inline-flex; align-items:center; gap:8px;
+      border:1px solid var(--border); background:#fff;
+      border-radius:999px; padding:6px 10px
+    }
     .pill label{font-size:12px; color:var(--muted)}
-    .role, .model{border:1px solid var(--border); border-radius:999px; padding:6px 10px; background:#fff;}
+    .role, .model{
+      border:1px solid var(--border); border-radius:999px; padding:6px 10px; background:#fff;
+    }
     .temp-pill{gap:12px}
     .strong{color:var(--accent); font-weight:600}
+
     .spinner{display:inline-block; width:16px; height:16px; border:2px solid #cfe0ff; border-top-color:var(--accent); border-radius:50%; animation:spin .8s linear infinite}
     @keyframes spin{to{transform:rotate(360deg)}}
 
-    /* Seite in der Mitte */
+    /* Info-Banner (nur für Disziplinar-Rolle) */
+    .banner{
+      display:none; max-width:980px; margin:8px auto 0; padding:10px 12px;
+      background:#fffaf2; border:1px solid #f6d9a8; color:#5c4520; border-radius:10px;
+      box-shadow:0 1px 2px rgba(0,0,0,.04);
+      font-size:13px;
+    }
+
+    /* Seite */
     .page-wrap{display:grid; place-items:start center; padding:18px 12px 96px;}
     .page{
       width: 820px; max-width: calc(100vw - 24px);
-      background:var(--paper); border:1px solid var(--border); border-radius:12px;
+      background:var(--paper); border:1px solid var(--border); border-radius:var(--radius);
       box-shadow:var(--shadow); padding:32px 40px; margin:16px auto;
     }
 
-    /* Nachrichtenstil wie Absätze im Dokument */
+    /* Nachrichten wie Absätze */
     .msg{margin: 0 0 18px 0; padding: 0;}
     .msg .role{display:none}
     .msg.user p{
       background:#fff; border:1px solid #e8e8ee; border-radius:8px; padding:12px 14px;
     }
     .msg.assistant p{
-      background: #f7faff; border:1px solid #cfe0ff; border-radius:8px; padding:12px 14px;
+      background:#f7faff; border:1px solid #cfe0ff; border-radius:8px; padding:12px 14px;
     }
-    .meta{font-size:12px; color:var(--muted); margin: 0 0 6px 2px;}
     .divider{height:1px; background:var(--border); margin:18px 0;}
+    .meta{font-size:12px; color:var(--muted); margin: 0 0 6px 2px;}
 
-    /* Composer am Seitenende */
+    /* Composer (unten fixiert) */
     .composer{
       position: fixed; left:0; right:0; bottom:0; z-index:20;
       background: linear-gradient(180deg, rgba(244,245,247,0) 0%, rgba(244,245,247,1) 30%, rgba(244,245,247,1) 100%);
@@ -81,7 +97,7 @@
     textarea#input{
       flex:1 1 auto; min-height:48px; max-height:180px; resize:vertical;
       border:1px solid var(--border); border-radius:8px; padding:10px 12px;
-      background:#fff; color:var(--ink); outline:none; box-shadow: inset 0 1px 1px rgba(0,0,0,.03);
+      background:#fff; color:#000; outline:none; box-shadow: inset 0 1px 1px rgba(0,0,0,.03);
       font:15px/1.45 "Segoe UI", Calibri, Arial, sans-serif;
     }
     button{
@@ -91,9 +107,10 @@
     button.primary{background:var(--accent); color:#fff; border-color:var(--accent);}
     button:disabled{opacity:.6; cursor:not-allowed}
     .ghost{background:#fff}
-    .mini{font-size:12px; padding:6px 10px; border-radius:999px; background:var(--accent-weak); border-color:#cfe0ff;}
 
     .row{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+
+    /* Fehler/Status */
     .error{
       max-width:820px; margin: 6px auto 0;
       border-left:4px solid #c62828; background:#fff5f5; color:#6a1b1b;
@@ -103,11 +120,11 @@
       max-width:820px; margin: 6px auto 0;
       font:12px/1.4 var(--mono); color:#6b6f76; white-space:pre-wrap;
       background:#fafbff; border:1px dashed #cfe0ff; border-radius:8px; padding:10px;
+      display:none;
     }
   </style>
 </head>
 <body>
-
   <!-- Ribbon -->
   <div class="ribbon-wrap">
     <div class="ribbon">
@@ -118,33 +135,40 @@
       <div class="sep"></div>
 
       <!-- Rollen: Freier Chat ist Default -->
-      <select id="role" class="role" title="Rolle">
+      <select id="role" class="role" title="Rolle" aria-label="Rolle wählen">
         <option value="frei" selected>Freier Chat</option>
         <option value="sprach_experte">Sprach-Experte</option>
         <option value="disziplinar_experte">Disziplinar-/Beschwerde (§/Abs.)</option>
       </select>
 
+      <!-- Modell -->
       <div class="pill">
         <label for="model">Modell</label>
-        <select id="model" class="model" title="Modell">
+        <select id="model" class="model" title="Modell" aria-label="Modell wählen">
           <option value="gpt-4o-mini" selected>gpt-4o-mini</option>
           <option value="o4-mini">o4-mini</option>
           <option value="gpt-4.1-mini">gpt-4.1-mini</option>
         </select>
       </div>
 
+      <!-- Temperatur (Balken + Live-Label) -->
       <div class="pill temp-pill">
         <label for="temp">Temperatur</label>
         <input id="temp" type="range" min="0" max="1" step="0.1" value="0.2" />
-        <span id="tlabel" class="strong">0.2 · deterministisch</span>
+        <span id="tlabel" class="strong" aria-live="polite">0.2 · deterministisch</span>
       </div>
     </div>
+  </div>
+
+  <!-- Disziplinar-Hinweis (nur bei Disziplinar-Rolle sichtbar) -->
+  <div id="banner" class="banner">
+    Hinweis (Disziplinar/Beschwerde): Bitte konkrete Rechtsgrundlagen nennen (z. B. §/Abs.). Ohne Quellen wird um Präzisierung gebeten.
   </div>
 
   <!-- Seite -->
   <div class="page-wrap">
     <div class="page" id="page">
-      <div id="messages"></div>
+      <div id="messages" aria-live="polite" aria-label="Chatverlauf"></div>
       <div class="divider"></div>
       <div class="meta">Neue Nachricht unten eingeben …</div>
     </div>
@@ -152,14 +176,14 @@
 
   <!-- Fehler/Status -->
   <div id="err" class="error" style="display:none"></div>
-  <div id="diag" class="statusbox" style="display:none"></div>
+  <div id="diag" class="statusbox"></div>
 
   <!-- Composer -->
   <div class="composer">
     <div class="composer-inner">
-      <textarea id="input" placeholder="Schreibe hier … (Enter = senden, Shift+Enter = Zeilenumbruch)"></textarea>
-      <div class="row" style="align-self:stretch; align-items:flex-end">
-        <button id="clear" class="ghost" title="Inhalt löschen">Leeren</button>
+      <textarea id="input" placeholder="Schreibe hier … (Enter = senden, Shift+Enter = Zeilenumbruch)" aria-label="Nachricht eingeben"></textarea>
+      <div class="row" style="align-items:flex-end">
+        <button id="clear" class="ghost" title="Eingabe leeren">Leeren</button>
         <button id="send" class="primary" title="Senden">
           <span id="sendLabel">Senden</span>
           <span id="sendSpin" class="spinner" style="display:none"></span>
@@ -169,138 +193,147 @@
   </div>
 
   <script>
-  const $ = (s)=>document.querySelector(s);
-  const messagesEl = $("#messages");
-  const input = $("#input");
-  const role = $("#role");
-  const model = $("#model");
-  const temp = $("#temp");
-  const tlabel = $("#tlabel");
-  const errBox = $("#err");
-  const diag = $("#diag");
-  const sendBtn = $("#send");
-  const sendLabel = $("#sendLabel");
-  const sendSpin = $("#sendSpin");
+    // ---------- Element-Refs ----------
+    const $ = (s)=>document.querySelector(s);
+    const messagesEl = $("#messages");
+    const input = $("#input");
+    const role = $("#role");
+    const model = $("#model");
+    const temp = $("#temp");
+    const tlabel = $("#tlabel");
+    const errBox = $("#err");
+    const diag = $("#diag");
+    const sendBtn = $("#send");
+    const sendLabel = $("#sendLabel");
+    const sendSpin = $("#sendSpin");
+    const banner = $("#banner");
 
-  // --- Temperatur Label ---
-  function tempLabel(v){
-    const n = Number(v);
-    if (n <= 0.2) return `${n.toFixed(1)} · deterministisch`;
-    if (n <= 0.5) return `${n.toFixed(1)} · ausgewogen`;
-    if (n <= 0.8) return `${n.toFixed(1)} · kreativer`;
-    return `${n.toFixed(1)} · sehr frei`;
-  }
-  function updateTempLabel(){
-    tlabel.textContent = tempLabel(temp.value);
-  }
-  updateTempLabel();
-  temp.addEventListener("input", updateTempLabel);
-
-  // --- Default-Temperaturen pro Rolle ---
-  const roleDefaults = {
-    "frei": 0.7,
-    "sprach_experte": 0.5,
-    "disziplinar_experte": 0.2
-  };
-
-  role.addEventListener("change", ()=>{
-    const val = roleDefaults[role.value];
-    if(val !== undefined){
-      temp.value = val;
-      updateTempLabel();
+    // ---------- Temperatur-Label ----------
+    function tempLabel(v){
+      const n = Number(v);
+      if (n <= 0.2) return `${n.toFixed(1)} · deterministisch`;
+      if (n <= 0.5) return `${n.toFixed(1)} · ausgewogen`;
+      if (n <= 0.8) return `${n.toFixed(1)} · kreativer`;
+      return `${n.toFixed(1)} · sehr frei`;
     }
-  });
+    function updateTempLabel(){ tlabel.textContent = tempLabel(temp.value); }
+    temp.addEventListener("input", updateTempLabel);
 
-  function rid(){ return "r"+Math.random().toString(36).slice(2,10); }
-  function showErr(msg, rid){
-    errBox.style.display="block";
-    errBox.innerHTML = `<strong>Fehler:</strong> ${msg}${rid?`<br><span style="color:#9aa0a6">Request-ID: ${rid}</span>`:""}`;
-  }
-  function clearErr(){ errBox.style.display="none"; errBox.textContent=""; }
-  function showDiag(lines){
-    diag.style.display="block";
-    diag.textContent = lines.join("\n");
-  }
-  function clearDiag(){ diag.style.display="none"; diag.textContent=""; }
-  function setSending(on){
-    sendBtn.disabled = !!on;
-    sendLabel.style.display = on ? "none" : "inline";
-    sendSpin.style.display = on ? "inline-block" : "none";
-  }
-  function addMsg(role, text){
-    const wrap = document.createElement("div");
-    wrap.className = `msg ${role}`;
-    const p = document.createElement("p");
-    p.textContent = text;
-    wrap.appendChild(p);
-    messagesEl.appendChild(wrap);
-    window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
-  }
+    // ---------- Default-Temperaturen pro Rolle ----------
+    const roleDefaults = {
+      "frei": 0.7,
+      "sprach_experte": 0.5,
+      "disziplinar_experte": 0.2
+    };
 
-  // Eingabe Events
-  input.addEventListener("keydown", (e)=>{
-    if(e.key === "Enter" && !e.shiftKey){
-      e.preventDefault();
-      $("#send").click();
-    }
-  });
-  $("#clear").addEventListener("click", ()=>{
-    input.value = "";
-    input.focus();
-  });
-
-  // Senden
-  $("#send").addEventListener("click", async ()=>{
-    clearErr(); clearDiag();
-    const txt = input.value.trim();
-    if(!txt){ showErr("Bitte Text eingeben."); input.focus(); return; }
-
-    const reqId = rid();
-    addMsg("user", txt);
-    input.value = "";
-    setSending(true);
-
-    try{
-      const payload = {
-        role: role.value,
-        message: txt,
-        model: model.value,
-        temperature: Number(temp.value),
-        requestId: reqId
-      };
-
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type":"application/json" },
-        body: JSON.stringify(payload)
-      });
-
-      const isJson = (res.headers.get("content-type")||"").includes("application/json");
-      const data = isJson ? await res.json() : { error: await res.text() };
-
-      if(!res.ok){
-        showErr(data?.error || "Serverfehler", data?.requestId || reqId);
-        showDiag([
-          `HTTP ${res.status}`,
-          `RID: ${data?.requestId || reqId}`,
-          data?.detail ? `Detail: ${typeof data.detail==="string" ? data.detail : JSON.stringify(data.detail)}` : ""
-        ].filter(Boolean));
-        return;
+    function applyRoleDefaults(r){
+      const val = roleDefaults[r];
+      if (val !== undefined){
+        temp.value = val;
+        updateTempLabel();
       }
-
-      addMsg("assistant", data.reply || "(leer)");
-      showDiag([`OK · Modell: ${model.value} · Temp: ${temp.value}`, `RID: ${data.requestId || reqId}`]);
-
-    }catch(e){
-      showErr("Netzwerkfehler oder Timeout.", reqId);
-      showDiag([String(e)]);
-    }finally{
-      setSending(false);
+      // Hinweisbanner nur bei Disziplinarrolle
+      banner.style.display = (r === "disziplinar_experte") ? "block" : "none";
     }
-  });
 
-  window.addEventListener("load", ()=> input.focus());
-</script>
+    // ---------- Fehler/Status ----------
+    function rid(){ return "r"+Math.random().toString(36).slice(2,10); }
+    function showErr(msg, r){
+      errBox.style.display="block";
+      errBox.innerHTML = `<strong>Fehler:</strong> ${msg}${r?`<br><span style="color:#9aa0a6">Request-ID: ${r}</span>`:""}`;
+    }
+    function clearErr(){ errBox.style.display="none"; errBox.textContent=""; }
+    function showDiag(lines){
+      if(!lines || !lines.length){ diag.style.display="none"; diag.textContent=""; return; }
+      diag.style.display="block"; diag.textContent = lines.join("\\n");
+    }
 
+    // ---------- UI-Helpers ----------
+    function setSending(on){
+      sendBtn.disabled = !!on;
+      sendLabel.style.display = on ? "none" : "inline";
+      sendSpin.style.display = on ? "inline-block" : "none";
+    }
+    function addMsg(kind, text){
+      const wrap = document.createElement("div");
+      wrap.className = `msg ${kind}`;
+      const p = document.createElement("p");
+      p.textContent = text;
+      wrap.appendChild(p);
+      messagesEl.appendChild(wrap);
+      // Auto-Scroll ans Ende
+      window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+    }
+
+    // ---------- Eingabe-Events ----------
+    input.addEventListener("keydown", (e)=>{
+      if(e.key === "Enter" && !e.shiftKey){
+        e.preventDefault();
+        sendBtn.click();
+      }
+    });
+    $("#clear").addEventListener("click", ()=>{
+      input.value = "";
+      input.focus();
+    });
+    role.addEventListener("change", ()=> applyRoleDefaults(role.value));
+
+    // ---------- Senden ----------
+    sendBtn.addEventListener("click", async ()=>{
+      clearErr(); showDiag([]);
+      const txt = input.value.trim();
+      if(!txt){ showErr("Bitte Text eingeben."); input.focus(); return; }
+
+      const reqId = rid();
+      addMsg("user", txt);
+      input.value = "";
+      setSending(true);
+
+      try{
+        const payload = {
+          role: role.value,
+          message: txt,
+          model: model.value,
+          temperature: Number(temp.value),
+          requestId: reqId
+        };
+
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type":"application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        const isJson = (res.headers.get("content-type")||"").includes("application/json");
+        const data = isJson ? await res.json() : { error: await res.text() };
+
+        if(!res.ok){
+          showErr(data?.error || "Serverfehler", data?.requestId || reqId);
+          showDiag([
+            `HTTP ${res.status}`,
+            `RID: ${data?.requestId || reqId}`,
+            data?.detail ? `Detail: ${typeof data.detail==="string" ? data.detail : JSON.stringify(data.detail)}` : ""
+          ].filter(Boolean));
+          return;
+        }
+
+        addMsg("assistant", data.reply || "(leer)");
+        showDiag([`OK · Modell: ${model.value} · Temp: ${temp.value}`, `RID: ${data.requestId || reqId}`]);
+
+      }catch(e){
+        showErr("Netzwerkfehler oder Timeout.", reqId);
+        showDiag([String(e)]);
+      }finally{
+        setSending(false);
+      }
+    });
+
+    // ---------- Init (beim Laden) ----------
+    window.addEventListener("load", ()=>{
+      // Rolle steht per Default auf "frei" → Temperatur 0.7 setzen & Banner-Status prüfen.
+      applyRoleDefaults(role.value);
+      input.focus();
+    });
+  </script>
 </body>
 </html>
