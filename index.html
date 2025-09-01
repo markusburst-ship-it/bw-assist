@@ -169,123 +169,138 @@
   </div>
 
   <script>
-    // ---------- Helpers ----------
-    const $ = (s)=>document.querySelector(s);
-    const messagesEl = $("#messages");
-    const input = $("#input");
-    const role = $("#role");
-    const model = $("#model");
-    const temp = $("#temp");
-    const tlabel = $("#tlabel");
-    const errBox = $("#err");
-    const diag = $("#diag");
-    const sendBtn = $("#send");
-    const sendLabel = $("#sendLabel");
-    const sendSpin = $("#sendSpin");
+  const $ = (s)=>document.querySelector(s);
+  const messagesEl = $("#messages");
+  const input = $("#input");
+  const role = $("#role");
+  const model = $("#model");
+  const temp = $("#temp");
+  const tlabel = $("#tlabel");
+  const errBox = $("#err");
+  const diag = $("#diag");
+  const sendBtn = $("#send");
+  const sendLabel = $("#sendLabel");
+  const sendSpin = $("#sendSpin");
 
-    function tempLabel(v){
-      const n = Number(v);
-      if (n <= 0.2) return `${n.toFixed(1)} · deterministisch`;
-      if (n <= 0.5) return `${n.toFixed(1)} · ausgewogen`;
-      if (n <= 0.8) return `${n.toFixed(1)} · kreativer`;
-      return `${n.toFixed(1)} · sehr frei`;
-    }
+  // --- Temperatur Label ---
+  function tempLabel(v){
+    const n = Number(v);
+    if (n <= 0.2) return `${n.toFixed(1)} · deterministisch`;
+    if (n <= 0.5) return `${n.toFixed(1)} · ausgewogen`;
+    if (n <= 0.8) return `${n.toFixed(1)} · kreativer`;
+    return `${n.toFixed(1)} · sehr frei`;
+  }
+  function updateTempLabel(){
     tlabel.textContent = tempLabel(temp.value);
-    temp.addEventListener("input", ()=> tlabel.textContent = tempLabel(temp.value));
+  }
+  updateTempLabel();
+  temp.addEventListener("input", updateTempLabel);
 
-    function rid(){ return "r"+Math.random().toString(36).slice(2,10); }
-    function showErr(msg, rid){
-      errBox.style.display="block";
-      errBox.innerHTML = `<strong>Fehler:</strong> ${msg}${rid?`<br><span style="color:#9aa0a6">Request-ID: ${rid}</span>`:""}`;
-    }
-    function clearErr(){ errBox.style.display="none"; errBox.textContent=""; }
-    function showDiag(lines){
-      diag.style.display="block";
-      diag.textContent = lines.join("\n");
-    }
-    function clearDiag(){ diag.style.display="none"; diag.textContent=""; }
-    function setSending(on){
-      sendBtn.disabled = !!on;
-      sendLabel.style.display = on ? "none" : "inline";
-      sendSpin.style.display = on ? "inline-block" : "none";
-    }
-    function addMsg(role, text){
-      const wrap = document.createElement("div");
-      wrap.className = `msg ${role}`;
-      const p = document.createElement("p");
-      p.textContent = text;
-      wrap.appendChild(p);
-      messagesEl.appendChild(wrap);
-      // Auto-Scroll ans Ende
-      window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
-    }
+  // --- Default-Temperaturen pro Rolle ---
+  const roleDefaults = {
+    "frei": 0.7,
+    "sprach_experte": 0.5,
+    "disziplinar_experte": 0.2
+  };
 
-    // ---------- Eingabe Events ----------
-    input.addEventListener("keydown", (e)=>{
-      if(e.key === "Enter" && !e.shiftKey){
-        e.preventDefault();
-        $("#send").click();
+  role.addEventListener("change", ()=>{
+    const val = roleDefaults[role.value];
+    if(val !== undefined){
+      temp.value = val;
+      updateTempLabel();
+    }
+  });
+
+  function rid(){ return "r"+Math.random().toString(36).slice(2,10); }
+  function showErr(msg, rid){
+    errBox.style.display="block";
+    errBox.innerHTML = `<strong>Fehler:</strong> ${msg}${rid?`<br><span style="color:#9aa0a6">Request-ID: ${rid}</span>`:""}`;
+  }
+  function clearErr(){ errBox.style.display="none"; errBox.textContent=""; }
+  function showDiag(lines){
+    diag.style.display="block";
+    diag.textContent = lines.join("\n");
+  }
+  function clearDiag(){ diag.style.display="none"; diag.textContent=""; }
+  function setSending(on){
+    sendBtn.disabled = !!on;
+    sendLabel.style.display = on ? "none" : "inline";
+    sendSpin.style.display = on ? "inline-block" : "none";
+  }
+  function addMsg(role, text){
+    const wrap = document.createElement("div");
+    wrap.className = `msg ${role}`;
+    const p = document.createElement("p");
+    p.textContent = text;
+    wrap.appendChild(p);
+    messagesEl.appendChild(wrap);
+    window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+  }
+
+  // Eingabe Events
+  input.addEventListener("keydown", (e)=>{
+    if(e.key === "Enter" && !e.shiftKey){
+      e.preventDefault();
+      $("#send").click();
+    }
+  });
+  $("#clear").addEventListener("click", ()=>{
+    input.value = "";
+    input.focus();
+  });
+
+  // Senden
+  $("#send").addEventListener("click", async ()=>{
+    clearErr(); clearDiag();
+    const txt = input.value.trim();
+    if(!txt){ showErr("Bitte Text eingeben."); input.focus(); return; }
+
+    const reqId = rid();
+    addMsg("user", txt);
+    input.value = "";
+    setSending(true);
+
+    try{
+      const payload = {
+        role: role.value,
+        message: txt,
+        model: model.value,
+        temperature: Number(temp.value),
+        requestId: reqId
+      };
+
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type":"application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      const isJson = (res.headers.get("content-type")||"").includes("application/json");
+      const data = isJson ? await res.json() : { error: await res.text() };
+
+      if(!res.ok){
+        showErr(data?.error || "Serverfehler", data?.requestId || reqId);
+        showDiag([
+          `HTTP ${res.status}`,
+          `RID: ${data?.requestId || reqId}`,
+          data?.detail ? `Detail: ${typeof data.detail==="string" ? data.detail : JSON.stringify(data.detail)}` : ""
+        ].filter(Boolean));
+        return;
       }
-    });
-    $("#clear").addEventListener("click", ()=>{
-      input.value = "";
-      input.focus();
-    });
 
-    // ---------- Senden ----------
-    $("#send").addEventListener("click", async ()=>{
-      clearErr(); clearDiag();
-      const txt = input.value.trim();
-      if(!txt){ showErr("Bitte Text eingeben."); input.focus(); return; }
+      addMsg("assistant", data.reply || "(leer)");
+      showDiag([`OK · Modell: ${model.value} · Temp: ${temp.value}`, `RID: ${data.requestId || reqId}`]);
 
-      const reqId = rid();
+    }catch(e){
+      showErr("Netzwerkfehler oder Timeout.", reqId);
+      showDiag([String(e)]);
+    }finally{
+      setSending(false);
+    }
+  });
 
-      // Direkt in die Seite „User“-Absatz einfügen
-      addMsg("user", txt);
-      input.value = "";
-      setSending(true);
+  window.addEventListener("load", ()=> input.focus());
+</script>
 
-      try{
-        const payload = {
-          role: role.value,
-          message: txt,
-          model: model.value,
-          temperature: Number(temp.value),
-          requestId: reqId
-        };
-
-        const res = await fetch("/api/chat", {
-          method: "POST",
-          headers: { "Content-Type":"application/json" },
-          body: JSON.stringify(payload)
-        });
-
-        const isJson = (res.headers.get("content-type")||"").includes("application/json");
-        const data = isJson ? await res.json() : { error: await res.text() };
-
-        if(!res.ok){
-          showErr(data?.error || "Serverfehler", data?.requestId || reqId);
-          showDiag([
-            `HTTP ${res.status}`,
-            `RID: ${data?.requestId || reqId}`,
-            data?.detail ? `Detail: ${typeof data.detail==="string" ? data.detail : JSON.stringify(data.detail)}` : ""
-          ].filter(Boolean));
-          return;
-        }
-
-        addMsg("assistant", data.reply || "(leer)");
-        showDiag([`OK · Modell: ${model.value} · Temp: ${temp.value}`, `RID: ${data.requestId || reqId}`]);
-
-      }catch(e){
-        showErr("Netzwerkfehler oder Timeout.", reqId);
-        showDiag([String(e)]);
-      }finally{
-        setSending(false);
-      }
-    });
-
-    // Beim Laden Fokus in die Eingabe
-    window.addEventListener("load", ()=> input.focus());
-  </script>
 </body>
 </html>
