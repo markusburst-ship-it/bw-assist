@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>BW-Assist</title>
   <style>
-    /* Office-ähnliche, helle Optik */
+    /* Helles Office-/Word-ähnliches Layout */
     :root{
       --bg:#f4f5f7; --paper:#ffffff; --ink:#1f2328; --muted:#66707a;
       --accent:#2b579a; --accent-weak:#eff4ff; --border:#d7dbe0;
@@ -18,15 +18,16 @@
       font:15.5px/1.5 "Segoe UI", SegoeUI, Calibri, "Helvetica Neue", Arial, sans-serif;
     }
 
-    /* Ribbon oben (wie Office) */
+    /* Ribbon */
     .ribbon-wrap{
+      position:sticky; top:0; z-index:10;
       background:linear-gradient(#ffffff,#fafbff);
       border-bottom:1px solid var(--border);
       box-shadow:0 2px 10px rgba(0,0,0,.04);
     }
     .ribbon{
-      max-width:1200px; margin:0 auto; padding:10px 16px;
-      display:flex; gap:14px; align-items:center; flex-wrap:wrap;
+      max-width:980px; margin:0 auto; padding:10px 16px;
+      display:flex; gap:12px; align-items:center; flex-wrap:wrap;
     }
     .brand{display:flex; align-items:center; gap:10px; padding-right:8px}
     .logo{
@@ -35,61 +36,78 @@
     }
     .brand h1{font-size:18px; margin:0; font-weight:700; color:var(--accent);}
     .sep{width:1px; height:32px; background:var(--border)}
-
     .pill{display:inline-flex; align-items:center; gap:8px; border:1px solid var(--border);
       background:#fff; border-radius:999px; padding:6px 10px}
     .pill label{font-size:12px; color:var(--muted)}
     .role, .model{border:1px solid var(--border); border-radius:999px; padding:6px 10px; background:#fff;}
-
     .temp-pill{gap:12px}
     .strong{color:var(--accent); font-weight:600}
-    .right{margin-left:auto}
-    .status{font-size:12px; color:var(--muted)}
-    .spinner{display:none; width:16px; height:16px; border:2px solid #cfe0ff; border-top-color:var(--accent); border-radius:50%; animation:spin .8s linear infinite}
-    .loading .spinner{display:inline-block}
+    .spinner{display:inline-block; width:16px; height:16px; border:2px solid #cfe0ff; border-top-color:var(--accent); border-radius:50%; animation:spin .8s linear infinite}
     @keyframes spin{to{transform:rotate(360deg)}}
 
-    /* Inhalt */
-    .app{max-width:1200px; margin:18px auto 48px; padding:0 16px;}
-    .doc{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
-    @media(max-width:980px){ .doc{grid-template-columns:1fr;} }
-
-    .panel{
-      background:var(--paper); border:1px solid var(--border); border-radius:var(--radius);
-      box-shadow:var(--shadow); padding:16px; display:flex; flex-direction:column; gap:12px; min-height:520px;
+    /* Seite in der Mitte */
+    .page-wrap{display:grid; place-items:start center; padding:18px 12px 96px;}
+    .page{
+      width: 820px; max-width: calc(100vw - 24px);
+      background:var(--paper); border:1px solid var(--border); border-radius:12px;
+      box-shadow:var(--shadow); padding:32px 40px; margin:16px auto;
     }
-    .panel h2{font-size:15px; margin:0; color:#2a2d2f; letter-spacing:.2px}
-    .hint{font-size:12px; color:var(--muted)}
 
-    textarea{
-      width:100%; flex:1 1 auto; min-height:340px; resize:vertical;
-      border:1px solid var(--border); border-radius:8px; padding:12px;
+    /* Nachrichtenstil wie Absätze im Dokument */
+    .msg{margin: 0 0 18px 0; padding: 0;}
+    .msg .role{display:none}
+    .msg.user p{
+      background:#fff; border:1px solid #e8e8ee; border-radius:8px; padding:12px 14px;
+    }
+    .msg.assistant p{
+      background: #f7faff; border:1px solid #cfe0ff; border-radius:8px; padding:12px 14px;
+    }
+    .meta{font-size:12px; color:var(--muted); margin: 0 0 6px 2px;}
+    .divider{height:1px; background:var(--border); margin:18px 0;}
+
+    /* Composer am Seitenende */
+    .composer{
+      position: fixed; left:0; right:0; bottom:0; z-index:20;
+      background: linear-gradient(180deg, rgba(244,245,247,0) 0%, rgba(244,245,247,1) 30%, rgba(244,245,247,1) 100%);
+      padding: 16px 12px 18px;
+      border-top: 1px solid var(--border);
+      display:flex; justify-content:center;
+    }
+    .composer-inner{
+      width:820px; max-width: calc(100vw - 24px);
+      background:#fff; border:1px solid var(--border); border-radius:12px; box-shadow:var(--shadow);
+      padding:10px; display:flex; gap:10px; align-items:flex-end;
+    }
+    textarea#input{
+      flex:1 1 auto; min-height:48px; max-height:180px; resize:vertical;
+      border:1px solid var(--border); border-radius:8px; padding:10px 12px;
       background:#fff; color:var(--ink); outline:none; box-shadow: inset 0 1px 1px rgba(0,0,0,.03);
       font:15px/1.45 "Segoe UI", Calibri, Arial, sans-serif;
     }
-    .output{
-      white-space:pre-wrap; border:1px solid var(--border); border-radius:8px; padding:12px;
-      flex:1 1 auto; min-height:340px; background:#fff;
-    }
-
-    .toolbar{display:flex; gap:8px; flex-wrap:wrap}
-    .row{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
-
     button{
-      border:1px solid var(--border); background:#fff; padding:8px 12px; border-radius:8px; cursor:pointer;
+      border:1px solid var(--border); background:#fff; padding:10px 14px; border-radius:8px; cursor:pointer;
       transition:.12s ease; font-weight:600;
     }
     button.primary{background:var(--accent); color:#fff; border-color:var(--accent);}
-    button.ghost{background:#fff}
-    button.mini{font-size:13px; padding:6px 10px; border-radius:999px; background:var(--accent-weak); border-color:#cfe0ff;}
-    button:hover{transform:translateY(-1px); box-shadow:0 2px 10px rgba(0,0,0,.06);}
+    button:disabled{opacity:.6; cursor:not-allowed}
+    .ghost{background:#fff}
+    .mini{font-size:12px; padding:6px 10px; border-radius:999px; background:var(--accent-weak); border-color:#cfe0ff;}
 
-    .footnote{font-size:12px; color:var(--muted)}
-    .error{border-left:4px solid #c62828; background:#fff5f5; color:#6a1b1b; border:1px solid #f2c4c4; padding:10px; border-radius:8px; font-size:14px;}
-    .statusbox{font:12px/1.4 var(--mono); color:var(--muted); white-space:pre-wrap; background:#fafbff; border:1px dashed #cfe0ff; border-radius:8px; padding:10px;}
+    .row{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+    .error{
+      max-width:820px; margin: 6px auto 0;
+      border-left:4px solid #c62828; background:#fff5f5; color:#6a1b1b;
+      border:1px solid #f2c4c4; padding:10px; border-radius:8px; font-size:14px;
+    }
+    .statusbox{
+      max-width:820px; margin: 6px auto 0;
+      font:12px/1.4 var(--mono); color:#6b6f76; white-space:pre-wrap;
+      background:#fafbff; border:1px dashed #cfe0ff; border-radius:8px; padding:10px;
+    }
   </style>
 </head>
 <body>
+
   <!-- Ribbon -->
   <div class="ribbon-wrap">
     <div class="ribbon">
@@ -97,163 +115,152 @@
         <div class="logo">BW</div>
         <h1>Assist</h1>
       </div>
-
       <div class="sep"></div>
 
-      <!-- Rollen: „Freier Chat“ ist Standard -->
+      <!-- Rollen: Freier Chat ist Default -->
       <select id="role" class="role" title="Rolle">
-        <option value="frei" selected>Freier Chat (ohne Stilvorgaben)</option>
-        <option value="sprach_experte">Sprach-Experte (Standard)</option>
-        <option value="disziplinar_experte">Disziplinar-/Beschwerderecht (mit §/Abs.)</option>
+        <option value="frei" selected>Freier Chat</option>
+        <option value="sprach_experte">Sprach-Experte</option>
+        <option value="disziplinar_experte">Disziplinar-/Beschwerde (§/Abs.)</option>
       </select>
 
-      <!-- Modell -->
       <div class="pill">
         <label for="model">Modell</label>
         <select id="model" class="model" title="Modell">
-          <option value="gpt-4o-mini" selected>gpt-4o-mini (preiswert)</option>
-          <option value="o4-mini">o4-mini (stärker)</option>
+          <option value="gpt-4o-mini" selected>gpt-4o-mini</option>
+          <option value="o4-mini">o4-mini</option>
           <option value="gpt-4.1-mini">gpt-4.1-mini</option>
         </select>
       </div>
 
-      <!-- Temperatur (nur Balken + Live-Label) -->
       <div class="pill temp-pill">
         <label for="temp">Temperatur</label>
         <input id="temp" type="range" min="0" max="1" step="0.1" value="0.2" />
         <span id="tlabel" class="strong">0.2 · deterministisch</span>
       </div>
+    </div>
+  </div>
 
-      <div class="right pill">
-        <span class="spinner" id="spin"></span>
-        <span id="status" class="status">Bereit</span>
+  <!-- Seite -->
+  <div class="page-wrap">
+    <div class="page" id="page">
+      <div id="messages"></div>
+      <div class="divider"></div>
+      <div class="meta">Neue Nachricht unten eingeben …</div>
+    </div>
+  </div>
+
+  <!-- Fehler/Status -->
+  <div id="err" class="error" style="display:none"></div>
+  <div id="diag" class="statusbox" style="display:none"></div>
+
+  <!-- Composer -->
+  <div class="composer">
+    <div class="composer-inner">
+      <textarea id="input" placeholder="Schreibe hier … (Enter = senden, Shift+Enter = Zeilenumbruch)"></textarea>
+      <div class="row" style="align-self:stretch; align-items:flex-end">
+        <button id="clear" class="ghost" title="Inhalt löschen">Leeren</button>
+        <button id="send" class="primary" title="Senden">
+          <span id="sendLabel">Senden</span>
+          <span id="sendSpin" class="spinner" style="display:none"></span>
+        </button>
       </div>
     </div>
   </div>
 
-  <!-- Inhalt -->
-  <div class="app">
-    <div class="doc">
-      <!-- Eingabe -->
-      <section class="panel">
-        <h2>Eingabe</h2>
-
-        <!-- Hinweis nur für Disziplinar-Rolle -->
-        <div id="roleHint" class="hint" style="display:none">
-          Hinweis zur Disziplinar-Rolle: Bitte immer konkrete Rechtsgrundlagen nennen (z. B. §/Abs.). Ohne Quellen wird um Präzisierung gebeten.
-        </div>
-
-        <textarea id="input" placeholder="Füge hier deinen Text oder Fall ein …"></textarea>
-
-        <div class="toolbar">
-          <button class="mini" data-hint="Bitte den Text straffen (max. 30 % kürzer). Kernaussagen beibehalten.">Kürzen</button>
-          <button class="mini" data-hint="Formaler formulieren: dienstlicher Stil, höflich, präzise, aktiv.">Formaler</button>
-          <button class="mini" data-hint="Klarer formulieren: kurze Sätze, eindeutige Verben, Überflüssiges streichen.">Klarer</button>
-
-          <div class="right row">
-            <button id="send" class="primary">Senden</button>
-            <button id="clear" class="ghost">Alles löschen</button>
-            <button id="export" class="ghost">Verlauf exportieren (.txt)</button>
-            <label class="ghost" style="padding:8px 12px; border-radius:8px; cursor:pointer;">
-              Verlauf importieren
-              <input id="import" type="file" accept=".txt,text/plain" hidden />
-            </label>
-          </div>
-        </div>
-
-        <div class="footnote">Tipp: <b>Enter</b> sendet · <b>Shift+Enter</b> fügt Zeilenumbruch ein.</div>
-
-        <div id="err" class="error" style="display:none"></div>
-        <div id="diag" class="statusbox" style="display:none"></div>
-      </section>
-
-      <!-- Ausgabe -->
-      <section class="panel">
-        <h2>Ausgabe</h2>
-        <div id="out" class="output">Antworten erscheinen hier …</div>
-      </section>
-    </div>
-  </div>
-
   <script>
-    const $=(s)=>document.querySelector(s);
-    const input=$("#input"), out=$("#out");
-    const role=$("#role"), model=$("#model"), temp=$("#temp"), tlabel=$("#tlabel");
-    const roleHint=$("#roleHint"); const errBox=$("#err"), diag=$("#diag"), statusLbl=$("#status");
-    const app=document.body;
+    // ---------- Helpers ----------
+    const $ = (s)=>document.querySelector(s);
+    const messagesEl = $("#messages");
+    const input = $("#input");
+    const role = $("#role");
+    const model = $("#model");
+    const temp = $("#temp");
+    const tlabel = $("#tlabel");
+    const errBox = $("#err");
+    const diag = $("#diag");
+    const sendBtn = $("#send");
+    const sendLabel = $("#sendLabel");
+    const sendSpin = $("#sendSpin");
 
-    // Temperatur-Label live aktualisieren
     function tempLabel(v){
-      const n=Number(v);
-      if (n<=0.2) return `${n.toFixed(1)} · deterministisch`;
-      if (n<=0.5) return `${n.toFixed(1)} · ausgewogen`;
-      if (n<=0.8) return `${n.toFixed(1)} · kreativer`;
+      const n = Number(v);
+      if (n <= 0.2) return `${n.toFixed(1)} · deterministisch`;
+      if (n <= 0.5) return `${n.toFixed(1)} · ausgewogen`;
+      if (n <= 0.8) return `${n.toFixed(1)} · kreativer`;
       return `${n.toFixed(1)} · sehr frei`;
     }
-    tlabel.textContent=tempLabel(temp.value);
-    temp.addEventListener("input", ()=> tlabel.textContent=tempLabel(temp.value));
+    tlabel.textContent = tempLabel(temp.value);
+    temp.addEventListener("input", ()=> tlabel.textContent = tempLabel(temp.value));
 
-    // Hinweis nur bei Disziplinar-Rolle
-    function updateHint(){
-      roleHint.style.display = role.value === "disziplinar_experte" ? "block" : "none";
-    }
-    updateHint();
-    role.addEventListener("change", updateHint);
-
-    // Mini-Prompts
-    document.querySelectorAll(".mini").forEach(btn=>{
-      btn.addEventListener("click", ()=>{
-        const hint = btn.getAttribute("data-hint");
-        const txt = input.value.trim();
-        input.value = txt ? `${txt}\n\n[Hinweis: ${hint}]` : hint;
-        input.focus();
-      });
-    });
-
-    // Enter sendet, Shift+Enter Zeilenumbruch
-    input.addEventListener("keydown",(e)=>{
-      if(e.key==="Enter" && !e.shiftKey){
-        e.preventDefault();
-        $("#send").click();
-      }
-    });
-
-    // Busy / Status
-    function setBusy(on,msg="Verarbeite …"){
-      app.classList.toggle("loading",!!on);
-      statusLbl.textContent = on ? msg : "Bereit";
-    }
-    function showErr(msg,rid){
+    function rid(){ return "r"+Math.random().toString(36).slice(2,10); }
+    function showErr(msg, rid){
       errBox.style.display="block";
       errBox.innerHTML = `<strong>Fehler:</strong> ${msg}${rid?`<br><span style="color:#9aa0a6">Request-ID: ${rid}</span>`:""}`;
     }
     function clearErr(){ errBox.style.display="none"; errBox.textContent=""; }
-    function showDiag(lines){ diag.style.display="block"; diag.textContent=lines.join("\n"); }
+    function showDiag(lines){
+      diag.style.display="block";
+      diag.textContent = lines.join("\n");
+    }
     function clearDiag(){ diag.style.display="none"; diag.textContent=""; }
-    const rid = ()=>"r"+Math.random().toString(36).slice(2,10);
+    function setSending(on){
+      sendBtn.disabled = !!on;
+      sendLabel.style.display = on ? "none" : "inline";
+      sendSpin.style.display = on ? "inline-block" : "none";
+    }
+    function addMsg(role, text){
+      const wrap = document.createElement("div");
+      wrap.className = `msg ${role}`;
+      const p = document.createElement("p");
+      p.textContent = text;
+      wrap.appendChild(p);
+      messagesEl.appendChild(wrap);
+      // Auto-Scroll ans Ende
+      window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+    }
 
-    // Senden
+    // ---------- Eingabe Events ----------
+    input.addEventListener("keydown", (e)=>{
+      if(e.key === "Enter" && !e.shiftKey){
+        e.preventDefault();
+        $("#send").click();
+      }
+    });
+    $("#clear").addEventListener("click", ()=>{
+      input.value = "";
+      input.focus();
+    });
+
+    // ---------- Senden ----------
     $("#send").addEventListener("click", async ()=>{
       clearErr(); clearDiag();
-      const text=input.value.trim();
-      if(!text){ showErr("Bitte Text eingeben."); return; }
+      const txt = input.value.trim();
+      if(!txt){ showErr("Bitte Text eingeben."); input.focus(); return; }
 
-      const reqId=rid();
-      const payload={
-        role: role.value,
-        message: text,
-        model: model.value,
-        temperature: Number(temp.value),
-        requestId: reqId
-      };
+      const reqId = rid();
 
-      setBusy(true,"Anfrage wird gesendet …");
+      // Direkt in die Seite „User“-Absatz einfügen
+      addMsg("user", txt);
+      input.value = "";
+      setSending(true);
+
       try{
-        const res=await fetch("/api/chat",{
-          method:"POST", headers:{ "Content-Type":"application/json" },
+        const payload = {
+          role: role.value,
+          message: txt,
+          model: model.value,
+          temperature: Number(temp.value),
+          requestId: reqId
+        };
+
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type":"application/json" },
           body: JSON.stringify(payload)
         });
-        const isJson=(res.headers.get("content-type")||"").includes("application/json");
+
+        const isJson = (res.headers.get("content-type")||"").includes("application/json");
         const data = isJson ? await res.json() : { error: await res.text() };
 
         if(!res.ok){
@@ -261,56 +268,24 @@
           showDiag([
             `HTTP ${res.status}`,
             `RID: ${data?.requestId || reqId}`,
-            data?.detail ? `Detail: ${typeof data.detail==="string"?data.detail:JSON.stringify(data.detail)}` : ""
+            data?.detail ? `Detail: ${typeof data.detail==="string" ? data.detail : JSON.stringify(data.detail)}` : ""
           ].filter(Boolean));
           return;
         }
 
-        out.textContent = data.reply || "(leer)";
+        addMsg("assistant", data.reply || "(leer)");
         showDiag([`OK · Modell: ${model.value} · Temp: ${temp.value}`, `RID: ${data.requestId || reqId}`]);
+
       }catch(e){
         showErr("Netzwerkfehler oder Timeout.", reqId);
         showDiag([String(e)]);
-      }finally{ setBusy(false); }
+      }finally{
+        setSending(false);
+      }
     });
 
-    // Clear
-    $("#clear").addEventListener("click", ()=>{
-      input.value=""; out.textContent="Antworten erscheinen hier …"; clearErr(); clearDiag();
-    });
-
-    // Export
-    $("#export").addEventListener("click", ()=>{
-      const dt=new Date(); const stamp=dt.toISOString().replace(/[:.]/g,"-").slice(0,19);
-      const roleTag=role.value;
-      const content =
-`[BW-Assist Export]
-Datum: ${dt.toLocaleString()}
-Rolle: ${role.value}
-Modell: ${model.value}
-Temperatur: ${temp.value}
-
---- Eingabe ---
-${input.value}
-
---- Ausgabe ---
-${out.textContent}
-`;
-      const blob=new Blob([content],{type:"text/plain;charset=utf-8"});
-      const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
-      a.download=\`bw-assist_\${roleTag}_\${stamp}.txt\`; a.click(); URL.revokeObjectURL(a.href);
-    });
-
-    // Import
-    $("#import").addEventListener("change", async (ev)=>{
-      const f=ev.target.files?.[0]; if(!f) return;
-      const text=await f.text();
-      const inMatch=text.split("--- Eingabe ---")[1]?.split("--- Ausgabe ---")[0]?.trim();
-      const outMatch=text.split("--- Ausgabe ---")[1]?.trim();
-      if(inMatch) input.value=inMatch;
-      if(outMatch) out.textContent=outMatch;
-      clearErr(); clearDiag();
-    });
+    // Beim Laden Fokus in die Eingabe
+    window.addEventListener("load", ()=> input.focus());
   </script>
 </body>
 </html>
